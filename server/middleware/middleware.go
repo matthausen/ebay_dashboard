@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"../models"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -27,6 +29,26 @@ const collName = "todolist"
 
 // collection object/instance
 var collection *mongo.Collection
+
+// APP_ID
+var APP_ID = goDotEnvVariable("APP_ID")
+
+// DEV_ID
+var DEV_ID = goDotEnvVariable("DEV_ID")
+
+//CERT_ID
+var CERT_ID = goDotEnvVariable("CERT_ID")
+
+func goDotEnvVariable(key string) string {
+
+	err := godotenv.Load(".env")
+
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	return os.Getenv(key)
+}
 
 // create connection with mongo db
 func init() {
