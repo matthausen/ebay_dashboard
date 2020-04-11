@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -31,14 +32,18 @@ const collName = "todolist"
 var collection *mongo.Collection
 
 // APP_ID
-var APP_ID = goDotEnvVariable("APP_ID")
+var AppID = goDotEnvVariable("APP_ID")
 
 // DEV_ID
-var DEV_ID = goDotEnvVariable("DEV_ID")
+var DevID = goDotEnvVariable("DEV_ID")
 
 //CERT_ID
-var CERT_ID = goDotEnvVariable("CERT_ID")
+var CertID = goDotEnvVariable("CERT_ID")
 
+// Finding service endpoint
+var FindingService = "https://svcs.ebay.com/services/search/FindingService/v1?OPERATION-NAME=findItemsByKeywords&SERVICE-VERSION=1.0.0&SECURITY-APPNAME=" + AppID + "&RESPONSE-DATA-FORMAT=JSON&keywords=harry%20potter%20phoenix"
+
+// Fetch environment variables
 func goDotEnvVariable(key string) string {
 
 	err := godotenv.Load(".env")
@@ -50,8 +55,63 @@ func goDotEnvVariable(key string) string {
 	return os.Getenv(key)
 }
 
+func findItemsByName() []models.ItemResponse {
+	var responseObject models.Response
+
+	resp, err := http.Get(FindingService)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	defer resp.Body.Close()
+
+	/* decoder := json.NewDecoder(resp.Body)
+	var data http.Response
+	err = decoder.Decode(&data)
+	if err != nil {
+		fmt.Println(err)
+	} */
+
+	responseData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	json.Unmarshal([]byte(responseData), &responseObject)
+
+	fmt.Println(responseData, " is the response data!")
+	fmt.Println(responseObject.FindItemsByKeywordsResponse.SearchResult.Item, " Item")
+
+	items := make([]models.ItemResponse, 0)
+	for i := 0; i < len(responseObject.FindItemsByKeywordsResponse.SearchResult.Item); i++ {
+		item := models.ItemResponse{
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Title,
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].GlobalID,
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Subtitle,
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].PrimaryCategory,
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Gallery,
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].ItemURL,
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].PaymentMethod,
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Location,
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Country,
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].ShipToLocation,
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].ShippingType,
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Condition,
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].ShipCost,
+			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Price,
+		}
+
+		items = append(items, item)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+	return items
+}
+
 // create connection with mongo db
 func init() {
+
+	findItemsByName()
 
 	// Set client options
 	clientOptions := options.Client().ApplyURI(connectionString)
