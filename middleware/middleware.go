@@ -56,66 +56,8 @@ func goDotEnvVariable(key string) string {
 	return os.Getenv(key)
 }
 
-func findItemsByName() []models.ItemResponse {
-	var responseObject models.Response
-
-	client := new(http.Client)
-	request, err := http.NewRequest("GET", FindingService, nil)
-	request.Header.Add("Accept-Encoding", "gzip")
-
-	response, err := client.Do(request)
-	defer response.Body.Close()
-
-	var reader io.ReadCloser
-	switch response.Header.Get("Content-Encoding") {
-	case "gzip":
-		reader, err = gzip.NewReader(response.Body)
-		defer reader.Close()
-	default:
-		reader = response.Body
-	}
-
-	io.Copy(os.Stdout, reader)
-
-	decoder := json.NewDecoder(reader)
-	test := decoder.Decode(&responseObject)
-
-	// responseData, err := ioutil.ReadAll(reader)
-	//json.Unmarshal(responseData, &responseObject)
-	fmt.Println("The test: ", test)
-	fmt.Println("The Item: ", responseObject)
-
-	items := make([]models.ItemResponse, 0)
-	for i := 0; i < len(responseObject.FindItemsByKeywordsResponse.SearchResult.Item); i++ {
-		item := models.ItemResponse{
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Title,
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].GlobalID,
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Subtitle,
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].PrimaryCategory,
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Gallery,
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].ItemURL,
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].PaymentMethod,
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Location,
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Country,
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].ShipToLocation,
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].ShippingType,
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Condition,
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].ShipCost,
-			responseObject.FindItemsByKeywordsResponse.SearchResult.Item[i].Price,
-		}
-
-		items = append(items, item)
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
-	return items
-}
-
 // create connection with mongo db
 func init() {
-
-	findItemsByName()
 
 	// Set client options
 	clientOptions := options.Client().ApplyURI(connectionString)
