@@ -1,10 +1,11 @@
 package middleware
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -58,28 +59,31 @@ func goDotEnvVariable(key string) string {
 func findItemsByName() []models.ItemResponse {
 	var responseObject models.Response
 
-	resp, err := http.Get(FindingService)
-	if err != nil {
-		log.Fatalln(err)
+	client := new(http.Client)
+	request, err := http.NewRequest("GET", FindingService, nil)
+	request.Header.Add("Accept-Encoding", "gzip")
+
+	response, err := client.Do(request)
+	defer response.Body.Close()
+
+	var reader io.ReadCloser
+	switch response.Header.Get("Content-Encoding") {
+	case "gzip":
+		reader, err = gzip.NewReader(response.Body)
+		defer reader.Close()
+	default:
+		reader = response.Body
 	}
 
-	defer resp.Body.Close()
+	io.Copy(os.Stdout, reader)
 
-	/* decoder := json.NewDecoder(resp.Body)
-	var data http.Response
-	err = decoder.Decode(&data)
-	if err != nil {
-		fmt.Println(err)
-	} */
+	decoder := json.NewDecoder(reader)
+	test := decoder.Decode(&responseObject)
 
-	responseData, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	json.Unmarshal([]byte(responseData), &responseObject)
-
-	fmt.Println(responseData, " is the response data!")
-	fmt.Println(responseObject.FindItemsByKeywordsResponse.SearchResult.Item, " Item")
+	// responseData, err := ioutil.ReadAll(reader)
+	//json.Unmarshal(responseData, &responseObject)
+	fmt.Println("The test: ", test)
+	fmt.Println("The Item: ", responseObject)
 
 	items := make([]models.ItemResponse, 0)
 	for i := 0; i < len(responseObject.FindItemsByKeywordsResponse.SearchResult.Item); i++ {
